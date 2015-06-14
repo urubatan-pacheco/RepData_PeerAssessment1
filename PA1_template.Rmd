@@ -1,25 +1,103 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research Peer Assessment 1"
+author: "Urubatan Rocha Pacheco"
+date: "06/12/2015"
+output: html_document
 ---
-
-
 ## Loading and preprocessing the data
+```{r}
+dwld.msg <- 'successfull!'
+pp.msg <- 'successfull!'
+temp <- tempfile()
+dwld.res <- download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",destfile = temp, method="curl")
+if (dwld.res != 0) { 
+        dwld.msg <- 'with error' 
+} else {
+        data <- read.csv(unz(temp, "activity.csv"))
+        data$date <- as.Date(as.character(data$date), "%Y-%m-%d")
+        if (dim(data)[1] == 0) { 
+                pp.msg <- 'with error'
+                }
+        } 
+unlink(temp)
 
-
-
+```
+Download `r dwld.msg` and preprocessing `r pp.msg`.
+  
 ## What is mean total number of steps taken per day?
+  
+```{r}
+library(ggplot2)
+total.steps.day <- with(data, tapply(steps,date, sum))
+
+mean.total.steps.day = mean(total.steps.day, na.rm = T)
+median.total.steps.day = median(total.steps.day, na.rm = T)
+
+qplot(total.steps.day, geom="histogram", binwidth = range(total.steps.day, na.rm =T)[2]/30)
 
 
+```
+  
+The mean total number of steps taken per day are `r format(mean.total.steps.day, scientific = F, digits = 1)` steps and  the median of the total number of steps taken per day are `r format(median.total.steps.day, scientific = F, digits = 1)`.
 
 ## What is the average daily activity pattern?
+```{r}
+daily.activity.pattern <- with(data, tapply(steps, interval, mean, na.rm = T))
+df.daily.activity.pattern = data.frame( interval = as.numeric(names(daily.activity.pattern)), steps = daily.activity.pattern )
 
+qplot(interval, steps, data = df.daily.activity.pattern, geom = c("line"),  ylab = "average activity (steps)", xlab = "5-minute interval id." )
 
+max_interval <- df.daily.activity.pattern[df.daily.activity.pattern$steps == max(daily.activity.pattern),]$interval
+
+```
+The maximum activity occurs at `r max_interval` 5-min inteval id with average activity of `r as.numeric(daily.activity.pattern[as.character(max_interval)])` steps.
 
 ## Imputing missing values
+```{r}
+total.number.of.rows.with.nas <- with(data, sum(is.na(interval) |is.na(steps) | is.na(date)) )
+
+data.no.miss <- data
+impute.fct <- function(id) { daily.activity.pattern[as.character(data[id,]$interval)]  }
+missed <- subset(data,is.na(steps) )
+missed.ids <- with(data,which(is.na(steps)))
+data.no.miss[missed.ids,]$steps <- as.numeric(sapply(missed.ids, impute.fct ))
+
+total.number.of.rows.with.nas.no.miss <- with(data.no.miss, sum(is.na(interval) |is.na(steps) | is.na(date)) )
+
+total.steps.day.no.miss <- with(data.no.miss, tapply(steps,date, sum))
+
+mean.total.steps.day.no.miss = mean(total.steps.day.no.miss)
+median.total.steps.day.no.miss = median(total.steps.day.no.miss)
+
+qplot(total.steps.day.no.miss, geom="histogram", binwidth = range(total.steps.day.no.miss, na.rm =T)[2]/30)
 
 
+```
 
+The total number of rows with NAs are `r total.number.of.rows.with.nas` rows. This is `r format(100* total.number.of.rows.with.nas/ nrow(data),scientific = F, digits = 1)`% of dataset rows.
+  
+After imputing the missing values with the mean we recalculate the previous measures. So, the mean total number of steps taken per day are `r format(mean.total.steps.day.no.miss, scientific = F, digits = 1)` steps and  the median of the total number of steps taken per day are `r format(median.total.steps.day.no.miss, scientific = F, digits = 1)`.
+
+The absolute difference between the means are of `r format(abs(mean.total.steps.day.no.miss - mean.total.steps.day), scientific = F, digits = 1)` steps and the absolute difference between the medians are of `r format(abs(median.total.steps.day.no.miss - median.total.steps.day), scientific = F, digits = 1)` steps.
+  
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+data.no.miss$is.weekday <- factor(!(weekdays(data.no.miss$date) %in% c("Sunday","Saturnday")), c("TRUE","FALSE"),c("weekday","weekend"))
+
+
+daily.activity.pattern.wd <- with(data.no.miss[data.no.miss$is.weekday =="weekday",], tapply(steps, interval, mean, na.rm = T))
+daily.activity.pattern.we <- with(data.no.miss[data.no.miss$is.weekday =="weekend",], tapply(steps, interval, mean, na.rm = T))
+
+
+dfwd = data.frame( interval = as.numeric(names(daily.activity.pattern.wd)), steps = daily.activity.pattern.wd, is.weekday = rep("weekday", length(daily.activity.pattern.wd))   )
+dfwe = data.frame( interval = as.numeric(names(daily.activity.pattern.we)), steps = daily.activity.pattern.we, is.weekday = rep("weekend", length(daily.activity.pattern.we))   )
+
+df <- rbind(dfwd,dfwe)
+
+qplot(interval, steps, data = df, geom = c("line"), facets = is.weekday~., ylab = "average activity (steps)", xlab = "5-minute interval id." )
+
+max_interval.wd <- dfwd[dfwd$steps == max(daily.activity.pattern.wd),]$interval
+max_interval.we <- dfwe[dfwe$steps == max(daily.activity.pattern.we),]$interval
+```
+
+As we can see at weekdays the activity pattern is higher at morning and at weekends is moderate higher at the middle of the day. So, on the weekdays the maximum activity occurs at `r max_interval.wd` 5-min inteval id with average activity of `r as.numeric(daily.activity.pattern.wd[as.character(max_interval.wd)])` steps. And, on the weekends the maximum activity occurs at `r max_interval.we` 5-min inteval id with average activity of `r as.numeric(daily.activity.pattern.we[as.character(max_interval.we)])` steps. 
