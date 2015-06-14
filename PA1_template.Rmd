@@ -53,6 +53,9 @@ max_interval <- df.daily.activity.pattern[df.daily.activity.pattern$steps == max
 The maximum activity occurs at `r max_interval` 5-min inteval id with average activity of `r as.numeric(daily.activity.pattern[as.character(max_interval)])` steps.
 
 ## Imputing missing values
+  
+The strategy to impute missing values uses the mean activity for the 5-minute interval that was missing.
+
 ```{r}
 total.number.of.rows.with.nas <- with(data, sum(is.na(interval) |is.na(steps) | is.na(date)) )
 

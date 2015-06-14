@@ -101,6 +101,7 @@ qplot(interval, steps, data = df.daily.activity.pattern, geom = c(&quot;line&quo
 </div>
 <div id="imputing-missing-values" class="section level2">
 <h2>Imputing missing values</h2>
+<p>The strategy to impute missing values uses the mean activity for the 5-minute interval that was missing.</p>
 <pre class="r"><code>total.number.of.rows.with.nas &lt;- with(data, sum(is.na(interval) |is.na(steps) | is.na(date)) )
 
 data.no.miss &lt;- data
